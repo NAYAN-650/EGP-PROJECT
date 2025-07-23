@@ -4,45 +4,53 @@ trigger:
       - main
 
 pool:
-  vmImage: 'ubuntu-latest'
+  name: Default  # 👈 Targets your self-hosted agent named BelalAgent01
 
 variables:
   PYTHON_VERSION: '3.11'
   APP_NAME: 'eg-erp-app'
-  PACKAGE_PATH: '$(System.DefaultWorkingDirectory)/app.zip'
+  PACKAGE_PATH: '$(Pipeline.Workspace)/app.zip'  # ✅ Recommended path for packaging
+  SERVICE_CONNECTION: 'EG-Service Connection'   # 🔐 Federated identity connection
 
 steps:
-  # 🐍 Set up Python
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(PYTHON_VERSION)'
-    displayName: 'Set Python Version'
 
-  # 📦 Install project dependencies
-  - script: |
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
-    displayName: 'Install Django Dependencies'
+# 🐍 Set up Python
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '$(PYTHON_VERSION)'
+    addToPath: true
+  displayName: 'Set Python Version'
 
-  # ⚙️ Django setup: migrations + static files
-  - script: |
-      python manage.py migrate --noinput
-      python manage.py collectstatic --noinput
-    displayName: 'Run Migrations & Collect Static Files'
+# 📦 Install project dependencies
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  workingDirectory: $(System.DefaultWorkingDirectory)
+  displayName: 'Install Django Dependencies'
 
-  # 🗜️ Package app for deployment
-  - script: |
-      zip -r app.zip . -x "*.git*" "*.venv*" "tests/*"
-    displayName: 'Package Django App'
+# ⚙️ Django setup: migrations + static files
+- script: |
+    python manage.py migrate --noinput
+    python manage.py collectstatic --noinput
+  workingDirectory: $(System.DefaultWorkingDirectory)
+  displayName: 'Run Migrations & Collect Static Files'
 
-  # 🚀 Deploy to Azure Web App using federated identity
-  - task: AzureWebApp@1
-    inputs:
-      azureSubscription: 'EG-Service Connection'  # ✅ Friendly name of your service connection
-      appType: 'webAppLinux'
-      appName: '$(APP_NAME)'
-      package: '$(PACKAGE_PATH)'
-    displayName: 'Deploy to Azure Web App'
+# 🗜️ Package app for deployment
+- script: |
+    zip -r $(PACKAGE_PATH) . -x "*.git*" "*.venv*" "tests/*"
+  workingDirectory: $(System.DefaultWorkingDirectory)
+  displayName: 'Package Django App'
+
+# 🚀 Deploy to Azure Web App using federated identity
+- task: AzureWebApp@1
+  inputs:
+    azureSubscription: '$(SERVICE_CONNECTION)'
+    appType: 'webAppLinux'
+    appName: '$(APP_NAME)'
+    package: '$(PACKAGE_PATH)'
+  displayName: 'Deploy to Azure Web App (Federated Identity)'
+
+
 
 
 
