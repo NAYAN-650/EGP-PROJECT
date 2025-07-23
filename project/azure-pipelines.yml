@@ -4,13 +4,13 @@ trigger:
       - main
 
 pool:
-  name: Default  # 👈 Targets your self-hosted agent named BelalAgent01
+  vmImage: 'ubuntu-latest'  # 🔄 Microsoft-hosted agent for faster execution
 
 variables:
   PYTHON_VERSION: '3.11'
   APP_NAME: 'eg-erp-app'
-  PACKAGE_PATH: '$(Pipeline.Workspace)/app.zip'  # ✅ Recommended path for packaging
-  SERVICE_CONNECTION: 'EG-Service Connection'   # 🔐 Federated identity connection
+  PACKAGE_PATH: '$(Pipeline.Workspace)/app.zip'
+  SERVICE_CONNECTION: 'EG-Service Connection'  # ✅ Named ARM service connection
 
 steps:
 
@@ -21,34 +21,35 @@ steps:
     addToPath: true
   displayName: 'Set Python Version'
 
-# 📦 Install project dependencies
+# 📦 Install Django Dependencies
 - script: |
     python -m pip install --upgrade pip
     pip install -r requirements.txt
   workingDirectory: $(System.DefaultWorkingDirectory)
-  displayName: 'Install Django Dependencies'
+  displayName: 'Install Dependencies'
 
-# ⚙️ Django setup: migrations + static files
+# ⚙️ Migrate and Collect Static Files
 - script: |
     python manage.py migrate --noinput
     python manage.py collectstatic --noinput
   workingDirectory: $(System.DefaultWorkingDirectory)
-  displayName: 'Run Migrations & Collect Static Files'
+  displayName: 'Run Migrations & Collect Static'
 
-# 🗜️ Package app for deployment
+# 🗜️ Package the Django App
 - script: |
-    zip -r $(PACKAGE_PATH) . -x "*.git*" "*.venv*" "tests/*"
+    zip -r "$(PACKAGE_PATH)" . -x "*.git*" "*.venv*" "tests/*"
   workingDirectory: $(System.DefaultWorkingDirectory)
   displayName: 'Package Django App'
 
-# 🚀 Deploy to Azure Web App using federated identity
+# 🚀 Deploy with Federated Identity
 - task: AzureWebApp@1
   inputs:
-    azureSubscription: '$(SERVICE_CONNECTION)'
+    azureSubscription: '$(SERVICE_CONNECTION)'  # 🛡 Must match the registered service connection name
     appType: 'webAppLinux'
     appName: '$(APP_NAME)'
     package: '$(PACKAGE_PATH)'
-  displayName: 'Deploy to Azure Web App (Federated Identity)'
+  displayName: 'Deploy to Azure Web App'
+
 
 
 
