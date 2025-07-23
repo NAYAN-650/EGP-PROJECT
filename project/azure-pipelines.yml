@@ -12,35 +12,37 @@ variables:
   PACKAGE_PATH: '$(System.DefaultWorkingDirectory)/app.zip'
 
 steps:
-  # ✅ Use desired Python version
+  # 🐍 Set up Python
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '$(PYTHON_VERSION)'
     displayName: 'Set Python Version'
 
-  # ✅ Install dependencies (no virtualenv needed between steps)
+  # 📦 Install project dependencies
   - script: |
       python -m pip install --upgrade pip
       pip install -r requirements.txt
     displayName: 'Install Django Dependencies'
 
-  # ✅ Optional: run Django pre-deployment tasks
+  # ⚙️ Django setup: migrations + static files
   - script: |
       python manage.py migrate --noinput
       python manage.py collectstatic --noinput
     displayName: 'Run Migrations & Collect Static Files'
 
-  # ✅ Package the app for deployment
+  # 🗜️ Package app for deployment
   - script: |
       zip -r app.zip . -x "*.git*" "*.venv*" "tests/*"
     displayName: 'Package Django App'
 
-  # ✅ Deploy to Azure Web App (Linux)
+  # 🚀 Deploy to Azure Web App using federated identity
   - task: AzureWebApp@1
     inputs:
-      azureSubscription: '5f7b55ce-d08d-4f88-a86a-2d2ebf12ac31'  # Federated connection ID or name
+      azureSubscription: 'EG-Service Connection'  # ✅ Friendly name of your service connection
       appType: 'webAppLinux'
       appName: '$(APP_NAME)'
       package: '$(PACKAGE_PATH)'
     displayName: 'Deploy to Azure Web App'
+
+
 
