@@ -1,0 +1,46 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  PYTHON_VERSION: '3.11'
+  APP_NAME: 'eg-erp-app'
+  PACKAGE_PATH: '$(System.DefaultWorkingDirectory)/app.zip'
+
+steps:
+  # ✅ Use desired Python version
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(PYTHON_VERSION)'
+    displayName: 'Set Python Version'
+
+  # ✅ Install dependencies (no virtualenv needed between steps)
+  - script: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+    displayName: 'Install Django Dependencies'
+
+  # ✅ Optional: run Django pre-deployment tasks
+  - script: |
+      python manage.py migrate --noinput
+      python manage.py collectstatic --noinput
+    displayName: 'Run Migrations & Collect Static Files'
+
+  # ✅ Package the app for deployment
+  - script: |
+      zip -r app.zip . -x "*.git*" "*.venv*" "tests/*"
+    displayName: 'Package Django App'
+
+  # ✅ Deploy to Azure Web App (Linux)
+  - task: AzureWebApp@1
+    inputs:
+      azureSubscription: '5f7b55ce-d08d-4f88-a86a-2d2ebf12ac31'  # Federated connection ID or name
+      appType: 'webAppLinux'
+      appName: '$(APP_NAME)'
+      package: '$(PACKAGE_PATH)'
+    displayName: 'Deploy to Azure Web App'
+
