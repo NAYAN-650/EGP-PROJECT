@@ -47,7 +47,8 @@ jobs:
       - name: 🚀 Deploy to Azure
         uses: azure/webapps-deploy@v2
         with:
-          app-name: eg-erp-app  # Replace with actual Azure Web App name
+          app-name: egp-erp-app  # Replace with actual Azure Web App name
           slot-name: production
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISH_PROFILE }}
           package: .
+
