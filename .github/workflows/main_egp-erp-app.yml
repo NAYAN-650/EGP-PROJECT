@@ -33,6 +33,14 @@ jobs:
           python manage.py collectstatic --noinput
           python manage.py migrate
 
+      - name: 💾 Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: 📦 Package artifact for deployment
         run: |
           zip -r release.zip . -x "venv/*" "__pycache__/*" "*.pyc" "*.pyo" "*.db"
@@ -62,11 +70,19 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          auth-type: OIDC
+          enable-AzPSSession: false
+          environment: azurecloud
+          audience: api://AzureADTokenExchange
 
       - name: 🚀 Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'EGP-ERP-App'
-          slot-name: 'Production'
+          slot-name: 'production'
           package: release.zip
+
+
+
+
+
+
